@@ -24,18 +24,40 @@ App personal de gastos y ahorro. Funciona en el navegador, se instala en el móv
    - **iPhone (Safari):** botón compartir → *Añadir a pantalla de inicio*.
 6. Ya la tienes como una app más, y funciona sin conexión.
 
+### Si en Settings → Pages te sale "Upgrade or make this repository public"
+Es lo más habitual: **GitHub Pages solo funciona con repositorios públicos** en cuentas gratuitas. Opciones:
+- Haz público el repo: *Settings → General → (abajo del todo) Danger Zone → Change visibility → Public*, y luego vuelve a *Settings → Pages*. Ojo: el código (incluidos los importes por defecto de `index.html`) sería visible. Tus gastos NO, esos se guardan solo en tu móvil. Si te incomoda, cambia los números por defecto del código por unos genéricos y mételos tú en *Ajustes* de la app.
+- Alternativa sin GitHub: arrastra la carpeta con los archivos a https://app.netlify.com/drop. Te da una URL con HTTPS al momento, no listada en buscadores. Para actualizar, vuelve a arrastrar la carpeta.
+
 > Los datos se guardan en el navegador de cada dispositivo. Si cambias de móvil o borras datos del navegador, usa *Ajustes → Exportar datos* antes y *Importar* después. Haz una copia de vez en cuando.
 
 ## 2. Cómo se calcula tu plan (todo editable en Ajustes)
 
 - Ingreso mensual = beca / pagos al año (+ otros ingresos si los añades).
-- Fijos: piso, gastos, transporte y gimnasio se apartan primero.
-- Lo que sobra se reparte entre **compra / salidas / ahorro** (por defecto 55 / 27 / 18 %).
+- Fijos de verdad: piso y gimnasio. **Casa (luz, agua…) y transporte son variables**: tienen un presupuesto estimado (60 € y 50 €) y lo que no uses se suma a tu ahorro; lo que te pases se resta.
+- Lo que sobra se reparte entre **compra / salidas / ahorro** (por defecto 55 / 35 / 10 %).
 - **Agosto**: sin piso ni gastos, todo ese dinero va a tu **cuenta de caprichos**.
 - Lo que no gastes de compra y salidas se suma a tu ahorro; lo que te pases se resta.
 - Cuentan como "gasto" solo las categorías compra, salidas y caprichos; los fijos ya están apartados.
 
-## 3. Conectar con Abanca
+## 3. Recordatorio cuando te llegue la notificación de Abanca
+
+Una web app **no puede leer las notificaciones de otras apps** (ni la de Abanca). Lo que sí hace la app es abrirse con el gasto ya rellenado cuando algo la lance. Enlaces que entiende (cámbialos por tu URL):
+
+- `https://TU_URL/?add=1` abre el formulario de nuevo gasto.
+- `https://TU_URL/?text=TEXTO_DE_LA_NOTIFICACION` la app busca el importe en el texto (p. ej. "12,50 EUR"), lo rellena y propone la categoría según el comercio. Tú solo confirmas.
+- `https://TU_URL/?amt=12.5&note=Mercadona&cat=compra` todo indicado a mano.
+
+**En Android** (lo más cómodo): instala MacroDroid o Tasker y crea una regla:
+1. Disparador: *Notificación recibida* → app **Abanca**.
+2. Acción: *Abrir URL* con `https://TU_URL/?text=` seguido del texto de la notificación (la variable de notificación de la app, codificada para URL).
+Así, cada vez que Abanca te avise de un pago, se abre Mi Bolsillo con el gasto casi listo.
+
+**En iPhone** no hay un disparador equivalente para notificaciones de apps. Alternativas: un atajo de *Shortcuts* con automatización por **mensaje (SMS)** si Abanca te envía SMS con los cargos, o un acceso directo al formulario (`?add=1`) en la pantalla de inicio.
+
+Además, en la propia app: acceso directo "Añadir gasto" al mantener pulsado el icono (Android) y un aviso en Inicio cuando hoy aún no has apuntado nada.
+
+## 4. Conectar con Abanca
 
 **Importante:** Abanca no ofrece una API pública para particulares. La única vía "oficial" es la banca abierta (PSD2), que se usa a través de proveedores intermedios. Para un proyecto personal tienes tres niveles:
 
@@ -56,7 +78,7 @@ Proveedores a revisar (comprueba qué admiten cuentas personales y si Abanca est
 - Apps de terceros con sincronización bancaria (p. ej. Fintonic, Finanzas de Abanca si tu banco la ofrece) como fuente de exportación.
 - Notificaciones del banco + registro manual rápido con el botón ＋ (10 segundos por gasto).
 
-## 4. Ideas para seguir
+## 5. Ideas para seguir
 - Gráfico de evolución del ahorro mes a mes.
 - Notificación semanal "¿has apuntado tus gastos?".
 - Gastos recurrentes automáticos y objetivos concretos (viaje de agosto, etc.).

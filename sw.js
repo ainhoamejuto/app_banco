@@ -1,4 +1,4 @@
-const CACHE = 'mibolsillo-v1';
+const CACHE = 'mibolsillo-v2';
 const FILES = ['./', './index.html', './manifest.json', './icon.svg', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
@@ -19,6 +19,6 @@ self.addEventListener('fetch', e => {
       const copy = r.clone();
       caches.open(CACHE).then(c => c.put(e.request, copy));
       return r;
-    }).catch(() => caches.match(e.request))
+    }).catch(() => caches.match(e.request,{ignoreSearch:true}))
   );
 });

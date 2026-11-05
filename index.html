@@ -48,7 +48,7 @@ label{font-size:.82rem;color:var(--mut)}
 .btn{background:linear-gradient(135deg,var(--p),var(--p2));color:#fff;border:0;border-radius:14px;padding:13px 16px;font-size:1rem;font-weight:700;width:100%}
 .btn.sec{background:var(--line);color:var(--ink)}
 .cats{display:flex;gap:8px;margin:6px 0 12px;flex-wrap:wrap}
-.cats button{flex:1;border:2px solid var(--line);background:var(--bg);color:var(--ink);border-radius:14px;padding:10px 6px;font-size:.9rem}
+.cats button{flex:1 1 30%;border:2px solid var(--line);background:var(--bg);color:var(--ink);border-radius:14px;padding:10px 6px;font-size:.9rem}
 .cats button.on{border-color:var(--p);background:rgba(124,92,255,.14);font-weight:700}
 .tx{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
 .tx:last-child{border:0}
@@ -101,9 +101,9 @@ label{font-size:.82rem;color:var(--mut)}
 <script>
 const $=s=>document.querySelector(s);
 const KEY='mibolsillo_v1';
-const def={cfg:{beca:6644,pagos:12,extra:0,curso:'2026-09',trackFrom:'2026-11',piso:290,gastos:60,transporte:50,gimnasio:25,augFijos:true,augShare:100,pCompra:55,pSalidas:27,pAhorro:18,meta:1000},tx:[],celebrated:[]};
+const def={cfg:{beca:6644,pagos:12,extra:0,curso:'2026-09',trackFrom:'2026-11',piso:290,gastos:60,transporte:50,gimnasio:25,augFijos:true,augShare:100,pCompra:55,pSalidas:35,pAhorro:10,meta:1000,v:2},tx:[],celebrated:[]};
 let S=load(), view='home', viewMk=null, addCat='compra';
-function load(){try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&s.cfg)return{...def,...s,cfg:{...def.cfg,...s.cfg}}}catch(e){}return JSON.parse(JSON.stringify(def))}
+function load(){try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&s.cfg){const c={...def.cfg,...s.cfg};if(!s.cfg.v){c.pCompra=55;c.pSalidas=35;c.pAhorro=10;c.v=2}return{...def,...s,cfg:c}}}catch(e){}return JSON.parse(JSON.stringify(def))}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
 const fmt=n=>(n||0).toLocaleString('es-ES',{style:'currency',currency:'EUR',maximumFractionDigits:2});
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -117,17 +117,18 @@ function curMk(){const t=mkOf(todayStr()),c=curso();if(c.includes(t))return t;re
 
 function augFull(){const c=S.cfg;return Math.max(0,c.beca/c.pagos+c.extra-(c.augFijos?c.transporte+c.gimnasio:0))}
 function plan(mk){const c=S.cfg,inc=c.beca/c.pagos+c.extra;
-  if(isAug(mk)){const fijos=c.augFijos?c.transporte+c.gimnasio:0;return{aug:true,inc,fijos,pool:0,compra:0,salidas:0,ahorro:0,caprichos:augFull()*c.augShare/100}}
-  const fijos=c.piso+c.gastos+c.transporte+c.gimnasio;
-  const pool=inc-fijos+augFull()*(1-c.augShare/100)/11;
+  if(isAug(mk)){const fijos=c.augFijos?c.transporte+c.gimnasio:0;return{aug:true,inc,fijos,pool:0,compra:0,salidas:0,ahorro:0,casa:0,transporte:0,caprichos:augFull()*c.augShare/100}}
+  const fijos=c.piso+c.gimnasio;
+  const pool=inc-fijos-c.gastos-c.transporte+augFull()*(1-c.augShare/100)/11;
   const t=(c.pCompra+c.pSalidas+c.pAhorro)||1;
-  return{aug:false,inc,fijos,pool,compra:Math.max(0,pool*c.pCompra/t),salidas:Math.max(0,pool*c.pSalidas/t),ahorro:Math.max(0,pool*c.pAhorro/t),caprichos:0}}
+  return{aug:false,inc,fijos,pool,compra:Math.max(0,pool*c.pCompra/t),salidas:Math.max(0,pool*c.pSalidas/t),ahorro:Math.max(0,pool*c.pAhorro/t),caprichos:0,casa:c.gastos,transporte:c.transporte}}
 const spent=(mk,cat)=>S.tx.filter(t=>t.date.startsWith(mk)&&t.cat===cat).reduce((a,t)=>a+t.amount,0);
 function varStatus(mk){const p=plan(mk);const b=p.compra+p.salidas,s=spent(mk,'compra')+spent(mk,'salidas');return{b,s,left:b-s}}
+function extraLeft(mk){const p=plan(mk);return(p.casa-spent(mk,'casa'))+(p.transporte-spent(mk,'transporte'))}
 function potBalance(){const aug=curso().find(isAug);const total=plan(aug).caprichos;const sp=S.tx.filter(t=>t.cat==='caprichos').reduce((a,t)=>a+t.amount,0);return{total,spent:sp,left:total-sp}}
 function savings(){const cm=curMk();let saved=0,secured=0,potential=0;
   for(const mk of curso()){if(mk<S.cfg.trackFrom||mk>cm||isAug(mk))continue;const p=plan(mk),v=varStatus(mk);
-    if(mk<cm)saved+=p.ahorro+v.left;else{secured+=p.ahorro;potential=v.left}}
+    if(mk<cm)saved+=p.ahorro+v.left+extraLeft(mk);else{secured+=p.ahorro;potential=v.left+extraLeft(mk)}}
   return{saved,secured,potential,total:saved+secured}}
 function streak(){const cm=curMk();let n=0;const ms=curso().filter(m=>m>=S.cfg.trackFrom&&m<cm&&!isAug(m)).reverse();for(const mk of ms){if(varStatus(mk).left>=0)n++;else break}return n}
 function pctColor(p){return p>=100?'var(--bad)':p>=80?'var(--warn)':'var(--ok)'}
@@ -162,18 +163,20 @@ function vHome(){const mk=viewMk,p=plan(mk),isCur=mk===curMk();let h=monthNav();
     h+=`<div class="card"><h2>Fijos de este mes</h2><div class="mut">Transporte + gimnasio: ${fmt(p.fijos)} (ya contados)</div></div>`;
     return h}
   const v=varStatus(mk),pc=v.b>0?v.s/v.b*100:0;
+  if(isCur&&!S.tx.some(t=>t.date===todayStr()))h+=`<div class="card"><div class="msg">📝 Hoy no has apuntado ningún gasto. Si has pagado algo, toca ＋ para registrarlo.</div></div>`;
   h+=`<div class="card"><div class="ringwrap">${ring(pc,pctColor(pc),fmt(Math.max(0,v.left)),'te quedan')}<div><b>Compra + salidas</b><div class="mut">Gastado ${fmt(v.s)} de ${fmt(v.b)}</div>`;
   if(isCur){const d=new Date(),dim=new Date(d.getFullYear(),d.getMonth()+1,0).getDate(),left=dim-d.getDate()+1;
     h+=`<div class="chip" style="margin-top:8px">${v.left>0?'Hoy puedes gastar ≈ <b>'+fmt(v.left/left)+'</b>':'Hoy: gasto cero 🧘'}</div>`}
   h+=`</div></div></div>`;
   h+=`<div class="card"><h2>Tus sobres</h2>${env('🛒','Compra',p.compra,spent(mk,'compra'))}${env('🍻','Salidas',p.salidas,spent(mk,'salidas'))}</div>`;
+  h+=`<div class="card"><h2>Casa y transporte</h2><div class="mut" style="margin-bottom:10px">Gastos variables: lo que no uses pasa a tu ahorro 🐷</div>${env('💡','Casa (luz, agua…)',p.casa,spent(mk,'casa'))}${env('🚌','Transporte',p.transporte,spent(mk,'transporte'))}</div>`;
   if(isCur||mk<curMk())h+=`<div class="card"><div class="msg">${motivation(mk,v.left,v.b,v.s)}</div></div>`;
   const sv=savings();
-  h+=`<div class="card"><div class="row"><div><h2 style="margin:0">🐷 Ahorro del mes</h2><div class="mut">Reservado: ${fmt(p.ahorro)}${isCur&&v.left>0?' · +'+fmt(v.left)+' si no gastas más':''}</div></div><div class="big" style="color:var(--ok)">${fmt(sv.total)}</div></div></div>`;
-  h+=`<div class="card"><h2>Fijos (ya apartados)</h2><span class="chip">🏠 Piso ${fmt(S.cfg.piso)}</span><span class="chip">💡 Gastos ${fmt(S.cfg.gastos)}</span><span class="chip">🚌 Transporte ${fmt(S.cfg.transporte)}</span><span class="chip">💪 Gimnasio ${fmt(S.cfg.gimnasio)}</span></div>`;
+  h+=`<div class="card"><div class="row"><div><h2 style="margin:0">🐷 Ahorro del mes</h2><div class="mut">Reservado: ${fmt(p.ahorro)}${isCur&&(v.left+extraLeft(mk))>0?' · +'+fmt(v.left+extraLeft(mk))+' si no gastas más':''}</div></div><div class="big" style="color:var(--ok)">${fmt(sv.total)}</div></div></div>`;
+  h+=`<div class="card"><h2>Fijos (ya apartados)</h2><span class="chip">🏠 Piso ${fmt(S.cfg.piso)}</span><span class="chip">💪 Gimnasio ${fmt(S.cfg.gimnasio)}</span></div>`;
   return h}
 
-function vMovs(){const mk=viewMk;const list=S.tx.filter(t=>t.date.startsWith(mk)).sort((a,b)=>b.date.localeCompare(a.date));const E={compra:'🛒',salidas:'🍻',caprichos:'🛍️'};
+function vMovs(){const mk=viewMk;const list=S.tx.filter(t=>t.date.startsWith(mk)).sort((a,b)=>b.date.localeCompare(a.date));const E={compra:'🛒',salidas:'🍻',caprichos:'🛍️',casa:'💡',transporte:'🚌'};
   return monthNav()+`<div class="card"><button class="btn sec" onclick="openImp()">📥 Importar de Abanca</button></div><div class="card"><h2>${list.length} gastos</h2>${list.length?list.map(t=>`<div class="tx"><span class="e">${E[t.cat]||'💸'}</span><div class="t"><div><b>${esc(t.note||t.cat)}</b></div><div class="mut">${t.date.split('-').reverse().join('/')} · ${t.cat}</div></div><b>${fmt(t.amount)}</b><button onclick="delTx('${t.id}')">🗑</button></div>`).join(''):'<div class="mut">Aún no hay gastos este mes. ¡Eso es buena señal! 😄</div>'}</div>`}
 
 function vAhorro(){const sv=savings(),pot=potBalance(),m=S.cfg.meta,pc=m>0?sv.total/m*100:0,st=streak(),cm=curMk();
@@ -187,7 +190,7 @@ function vAhorro(){const sv=savings(),pot=potBalance(),m=S.cfg.meta,pc=m>0?sv.to
 
 function vAjustes(){const c=S.cfg;const f=(k,l,step)=>`<div><label>${l}</label><input type="number" step="${step||'0.01'}" value="${c[k]}" onchange="setCfg('${k}',this.value)"></div>`;
   return `<div class="card"><h2>Ingresos</h2><div class="grid2">${f('beca','Beca anual (€)')}${f('pagos','Pagos al año','1')}${f('extra','Otros ingresos al mes (€)')}${f('meta','Meta de ahorro (€)')}</div><label>Mes de inicio del curso</label><input type="month" value="${c.curso}" onchange="setStr('curso',this.value)"><label>Empezar a contar desde</label><input type="month" value="${c.trackFrom}" onchange="setStr('trackFrom',this.value)"></div>
-  <div class="card"><h2>Fijos mensuales</h2><div class="grid2">${f('piso','Piso')}${f('gastos','Gastos piso')}${f('transporte','Transporte')}${f('gimnasio','Gimnasio')}</div></div>
+  <div class="card"><h2>Gastos mensuales</h2><div class="mut" style="margin-bottom:8px">Piso y gimnasio son fijos. Casa (luz, agua…) y transporte son estimaciones: lo que sobre va a tu ahorro.</div><div class="grid2">${f('piso','Piso (fijo)')}${f('gimnasio','Gimnasio (fijo)')}${f('gastos','Casa: luz, agua… (estimado)')}${f('transporte','Transporte (estimado)')}</div></div>
   <div class="card"><h2>Reparto del resto (%)</h2><div class="grid2">${f('pCompra','Compra','1')}${f('pSalidas','Salidas','1')}${f('pAhorro','Ahorro','1')}${f('augShare','% de agosto a caprichos','1')}</div><label><input type="checkbox" style="width:auto" ${c.augFijos?'checked':''} onchange="S.cfg.augFijos=this.checked;save();render()"> En agosto sigo pagando transporte y gimnasio</label></div>
   <div class="card"><h2>Copia de seguridad</h2><button class="btn sec" onclick="exportData()">⬇️ Exportar datos</button><input type="file" id="bk" accept=".json" style="margin-top:8px" onchange="importData(this)"><button class="btn sec" style="margin-top:8px" onclick="if(confirm('¿Borrar todos tus datos?')){localStorage.removeItem(KEY);S=load();render()}">Borrar todo</button></div>`}
 function setCfg(k,v){S.cfg[k]=parseFloat(v)||0;save();render()}
@@ -195,7 +198,7 @@ function setStr(k,v){if(v){S.cfg[k]=v;save();viewMk=null;render()}}
 function exportData(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(S)],{type:'application/json'}));a.download='mi-bolsillo-'+todayStr()+'.json';a.click()}
 function importData(inp){const f=inp.files[0];if(!f)return;f.text().then(t=>{try{const d=JSON.parse(t);if(!d.cfg||!d.tx)throw 0;S={...def,...d,cfg:{...def.cfg,...d.cfg}};save();render()}catch(e){alert('Archivo no válido')}})}
 
-function openAdd(){const c=[['compra','🛒 Compra'],['salidas','🍻 Salidas'],['caprichos','🛍️ Caprichos']];
+function openAdd(){const c=[['compra','🛒 Compra'],['salidas','🍻 Salidas'],['casa','💡 Casa'],['transporte','🚌 Transporte'],['caprichos','🛍️ Caprichos']];
   $('#aCats').innerHTML=c.map(([k,l])=>`<button class="${addCat===k?'on':''}" onclick="addCat='${k}';openAdd()">${l}</button>`).join('');
   if(!$('#addSheet').classList.contains('show')){$('#aAmt').value='';$('#aNote').value='';$('#aDate').value=todayStr()}
   $('#addSheet').classList.add('show')}
@@ -215,7 +218,9 @@ function parseNum(s){s=String(s).replace(/[€\s]/g,'').replace(/EUR/i,'');if(!s
 function parseDate(s){s=String(s).trim();let m=s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/);if(m){const y=m[3].length===2?'20'+m[3]:m[3];return y+'-'+m[2].padStart(2,'0')+'-'+m[1].padStart(2,'0')}m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);return m?m[0]:null}
 function splitLine(l,d){const o=[];let c='',q=false;for(const ch of l){if(ch==='"')q=!q;else if(ch===d&&!q){o.push(c);c=''}else c+=ch}o.push(c);return o.map(x=>x.trim())}
 function guess(t){t=t.toLowerCase();
-  if(/alquiler|arrend|gimnasio|gym|endesa|iberdrola|naturgy|emasagra|movistar|vodafone|orange|digi|consorcio|abono transporte/.test(t))return'fijo';
+  if(/alquiler|arrend|gimnasio|gym|basic-fit|fitness/.test(t))return'fijo';
+  if(/endesa|iberdrola|naturgy|emasagra|aguas|\bluz\b|\bagua\b|internet|fibra|movistar|vodafone|orange|digi\b/.test(t))return'casa';
+  if(/consorcio|abono|metro|autob|\bemt\b|tmb|tarjeta transporte/.test(t))return'transporte';
   if(/mercadona|carrefour|lidl|aldi|supermerc|alcampo|eroski|coviran|covirán|hipercor|consum|dia market|supersol|froiz/.test(t))return'compra';
   if(/bar |cervecer|restaur|pub |disco|glovo|just ?eat|uber ?eats|burger|mcdonald|telepizza|cafeter|cine|kebab|copas|taberna|pizz|helader|sushi|ocio/.test(t))return'salidas';
   if(/zara|amazon|shein|pull ?& ?bear|bershka|stradivarius|booking|ryanair|vueling|airbnb|aliexpress|apple|steam|primark|renfe|alsa|blablacar/.test(t))return'caprichos';
@@ -233,7 +238,7 @@ $('#impFile').addEventListener('change',e=>{const f=e.target.files[0];if(f)f.tex
 function parseImport(){const rows=parseCSV($('#impText').value);const have=new Set(S.tx.map(t=>t.key).filter(Boolean));
   impRows=rows.filter(r=>!have.has(r.key));
   if(!impRows.length){$('#impList').innerHTML='<div class="mut">No he encontrado cargos nuevos. Revisa que el archivo tenga fecha, concepto e importe.</div>';return}
-  const opts=c=>['compra','salidas','caprichos','fijo','ignorar'].map(o=>`<option ${o===c?'selected':''}>${o}</option>`).join('');
+  const opts=c=>['compra','salidas','casa','transporte','caprichos','fijo','ignorar'].map(o=>`<option ${o===c?'selected':''}>${o}</option>`).join('');
   $('#impList').innerHTML=`<div class="mut">${impRows.length} cargos nuevos. Ajusta la categoría; “fijo” e “ignorar” no se cuentan.</div>`+impRows.map((r,i)=>`<div class="tx"><div class="t"><div><b>${esc(r.note)}</b></div><div class="mut">${r.date.split('-').reverse().join('/')} · ${fmt(r.amount)}</div></div><select style="width:110px;margin:0" onchange="impRows[${i}].cat=this.value">${opts(r.cat)}</select></div>`).join('')+`<button class="btn" style="margin-top:10px" onclick="confirmImport()">Importar</button>`}
 function confirmImport(){let n=0;for(const r of impRows){S.tx.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),date:r.date,amount:r.amount,cat:r.cat,note:r.note,key:r.key});n++}
   save();closeSheets();render();toast('📥','Importado','Se han añadido '+n+' movimientos (los fijos e ignorados no cuentan en tus sobres).')}
@@ -243,10 +248,18 @@ function toast(e,t,p){$('#popE').textContent=e;$('#popT').textContent=t;$('#popP
 function confetti(){const E=['🎉','✨','💜','🐷','💸','⭐'];for(let i=0;i<26;i++){const s=document.createElement('span');s.className='conf';s.textContent=E[i%E.length];s.style.left=Math.random()*100+'vw';s.style.animationDelay=Math.random()*.8+'s';document.body.appendChild(s);setTimeout(()=>s.remove(),3800)}}
 function checkCelebrations(){const cm=curMk();const done=curso().filter(m=>m>=S.cfg.trackFrom&&m<cm&&!isAug(m)&&!S.celebrated.includes(m));
   if(!done.length)return;let last=null;for(const mk of done){S.celebrated.push(mk);if(varStatus(mk).left>=0)last=mk}save();
-  if(last){confetti();toast('🎉','¡'+mLabel(last)+' cerrado sin pasarte!','Has ahorrado '+fmt(plan(last).ahorro+varStatus(last).left)+' ese mes. Racha: '+streak()+'.')}}
+  if(last){confetti();toast('🎉','¡'+mLabel(last)+' cerrado sin pasarte!','Has ahorrado '+fmt(plan(last).ahorro+varStatus(last).left+extraLeft(last))+' ese mes. Racha: '+streak()+'.')}}
 
+/* --- enlace rápido: ?add=1  |  ?text=<texto de la notificación>  |  ?amt=12.5&note=Mercadona --- */
+function extractAmt(t){let m=t.match(/(\d{1,3}(?:\.\d{3})*,\d{1,2}|\d+[.,]\d{1,2}|\d+)\s*(?:€|eur)/i)||t.match(/(?:€|eur)\s*(\d{1,3}(?:\.\d{3})*,\d{1,2}|\d+[.,]\d{1,2}|\d+)/i)||t.match(/(\d+[.,]\d{2})/);return m?Math.abs(parseNum(m[1])):NaN}
+function handleLink(){const q=new URLSearchParams(location.search);const text=q.get('text')||'',amtQ=q.get('amt');
+  if(!q.has('add')&&!text&&!amtQ)return;
+  const a=amtQ?Math.abs(parseNum(amtQ)):extractAmt(text);const g=guess(text+' '+(q.get('note')||''));
+  addCat=q.get('cat')||(['compra','salidas','casa','transporte','caprichos'].includes(g)?g:'salidas');
+  openAdd();$('#aAmt').value=isNaN(a)?'':a;$('#aNote').value=(q.get('note')||text).slice(0,60);$('#aDate').value=todayStr();
+  try{history.replaceState(null,'',location.pathname)}catch(e){}}
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
-render();checkCelebrations();
+render();checkCelebrations();handleLink();
 </script>
 </body>
 </html>
